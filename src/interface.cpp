@@ -59,7 +59,7 @@ bool nl::interface::exists() const {
 	if ( this -> _ifd.empty())
 		return false;
 
-	return true;
+	return this -> get_index > 0;
 }
 
 std::string nl::interface::to_string() const {
