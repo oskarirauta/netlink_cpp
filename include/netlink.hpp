@@ -6,3 +6,4 @@
 #include "netlink/property.hpp"
 #include "netlink/msg.hpp"
 #include "netlink/socket.hpp"
+#include "netlink/network.hpp"

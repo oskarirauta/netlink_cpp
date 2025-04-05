@@ -1,7 +1,7 @@
 [![License:MIT](https://img.shields.io/badge/License-MIT-blue?style=plastic)](LICENSE)
 [![C++ CI build](../../actions/workflows/build.yml/badge.svg)](../../actions/workflows/build.yml)
 
-#### netlink_cpp
+### netlink_cpp
 Small nettling library
 
 ### <sub>Description</sub>

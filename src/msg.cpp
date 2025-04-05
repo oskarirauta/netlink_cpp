@@ -48,7 +48,7 @@ nl::msg nl::msg::add_ip_address(const nl::interface& ifd, const nl::ipaddress& a
                 .properties = {
                         { IFA_LOCAL, addr },
                         { IFA_ADDRESS, addr },
-                        { IFA_BROADCAST, addr.mask(prefix) },
+                        { IFA_BROADCAST, addr.broadcast(prefix) },
                 },
         };
 }

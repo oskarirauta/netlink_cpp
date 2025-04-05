@@ -108,3 +108,9 @@ nl::netns::~netns() {
 
 	this -> close();
 }
+
+std::ostream& operator <<(std::ostream& os, const nl::netns& netns) {
+
+	os << (std::string)netns;
+	return os;
+}

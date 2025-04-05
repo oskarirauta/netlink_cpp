@@ -16,8 +16,7 @@ namespace nl {
 
 		public:
 
-			//ipaddress& operator =(const char* addr);
-			//ipaddress& operator =(const std::string& addr);
+			ipaddress& operator =(const std::string& addr);
 			ipaddress& operator =(const ipaddress& other);
 
 			bool operator ==(const char* other) const;
@@ -29,14 +28,14 @@ namespace nl {
 			std::vector<int> components() const;
 			bool valid() const;
 			bool empty() const; // all zeros?
-			ipaddress mask(int prefix) const;
 			ipaddress mask(const nl::prefix& prefix) const;
+			ipaddress broadcast(const nl::prefix& prefix) const;
 			std::string to_string() const;
 			in_addr to_in_addr() const;
 
 			ipaddress() : _addr("0.0.0.0") {}
-			//ipaddress(const char* addr);
 			ipaddress(const std::string& addr);
+			ipaddress(const nl::prefix& prefix);
 
 		private:
 
@@ -48,7 +47,7 @@ namespace nl {
 
 		public:
 
-			//prefix& operator =(int length);
+			prefix& operator =(int length);
 			prefix& operator =(const prefix& other);
 
 			bool operator ==(const prefix& other) const;
@@ -58,12 +57,14 @@ namespace nl {
 			operator int() const;
 			operator __u8() const;
 
-			nl::ipaddress mask(const nl::ipaddress& addr) const;
+			nl::ipaddress netmask() const;
+			nl::ipaddress broadcast(const nl::ipaddress& addr) const;
 			bool valid() const;
 			std::string to_string() const;
 
 			prefix() : _length(24) {}
 			prefix(int length);
+			prefix(const nl::ipaddress& addr);
 
 		private:
 
@@ -74,8 +75,7 @@ namespace nl {
 
 		public:
 
-			//interface& operator =(const char* ifd);
-			//interface& operator =(const std::string& ifd);
+			interface& operator =(const std::string& ifd);
 			interface& operator =(const interface& other);
 
 			bool operator ==(const char* other) const;
@@ -92,7 +92,6 @@ namespace nl {
 			int to_if_index() const;
 
 			interface() : _ifd("") {}
-			//interface(const char* ifd) : _ifd(std::string(ifd)) {}
 			interface(const std::string& ifd) : _ifd(ifd) {}
 
 		private:
@@ -102,3 +101,7 @@ namespace nl {
 	};
 
 }
+
+std::ostream& operator <<(std::ostream& os, const nl::ipaddress& ipaddress);
+std::ostream& operator <<(std::ostream& os, const nl::prefix& prefix);
+std::ostream& operator <<(std::ostream& os, const nl::interface& interface);

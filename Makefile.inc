@@ -11,7 +11,7 @@ NETLINK_OBJS:= \
 	objs/nl_property.o \
 	objs/nl_msg.o \
 	objs/nl_socket.o \
-	objs/main.o
+	objs/nl_network.o
 
 objs/nl_ipaddress.o: $(NETLINK_DIR)/src/ipaddress.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<;
@@ -38,4 +38,7 @@ objs/nl_msg.o: $(NETLINK_DIR)/src/msg.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<;
 
 objs/nl_socket.o: $(NETLINK_DIR)/src/socket.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<;
+
+objs/nl_network.o: $(NETLINK_DIR)/src/network.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<;

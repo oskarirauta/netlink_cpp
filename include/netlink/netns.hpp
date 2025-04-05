@@ -34,3 +34,5 @@ namespace nl {
 	};
 
 }
+
+std::ostream& operator <<(std::ostream& os, const nl::netns& netns);

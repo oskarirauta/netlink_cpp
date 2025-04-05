@@ -1,23 +1,19 @@
 #include <algorithm>
 #include <stdexcept>
+#include <cstring>
 #include <arpa/inet.h>
 
 #include "netlink/types.hpp"
-/*
-nl::ipaddress& nl::ipaddress::operator =(const std::string& addr) {
 
-	this -> _addr = nl::ipaddress::sanitaze(addr);
-	return *this;
-}
-
-nl::ipaddress& nl::ipaddress::operator =(const char* addr) {
-
-	this -> _addr = nl::ipaddress::sanitaze(std::string(addr));
-	return *this;
-}
-*/
 nl::ipaddress& nl::ipaddress::operator =(const nl::ipaddress& other) {
 
+	this -> _addr = other._addr;
+	return *this;
+}
+
+nl::ipaddress& nl::ipaddress::operator =(const std::string& addr) {
+
+	nl::ipaddress other(addr);
 	this -> _addr = other._addr;
 	return *this;
 }
@@ -66,6 +62,9 @@ std::vector<int> nl::ipaddress::components() const {
 		str.erase(0, pos + 1);
 	}
 
+	if ( !str.empty())
+		vec.push_back(str);
+
 	if ( vec.size() != 4 ||
 		vec[0].empty() || vec[0].size() > 3 ||
 		vec[1].empty() || vec[1].size() > 3 ||
@@ -113,50 +112,29 @@ bool nl::ipaddress::valid() const {
 
 bool nl::ipaddress::empty() const {
 
-	if ( !this -> _addr.empty() || !this -> valid())
+	if ( this -> _addr.empty() || !this -> valid())
 		return true;
 
 	std::vector<int> comps = this -> components();
 	return comps.size() != 4 || ( comps[0] == 0 && comps[1] == 0 && comps[2] == 0 && comps[3] == 0 );
 }
 
-nl::ipaddress nl::ipaddress::mask(int prefix) const {
+nl::ipaddress nl::ipaddress::broadcast(const nl::prefix& prefix) const {
 
-	if ( this -> empty() || prefix < 1 || prefix > 32 )
-		return nl::ipaddress("0.0.0.0");
+	in_addr mask, broadcast;
 
-	std::vector<int> comps = this -> components();
+	std::memset(&mask, 0, sizeof(mask));
+	mask.s_addr = ::htonl((int)prefix == 0 ? 0 : ( ~((1 << (32 - (int)prefix)) - 1)));
 
-	unsigned char mask[4];
-	int ip = 0xffffffffu >> ( 32 - prefix ) << ( 32 - prefix );
+	std::memset(&broadcast, 0, sizeof(broadcast));
+	broadcast.s_addr = (this -> to_in_addr().s_addr & mask.s_addr) | ~mask.s_addr;
 
-	mask[3] = ( ip >> 0 ) && 0xff;
-	mask[2] = ( ip >> 8 ) && 0xff;
-	mask[1] = ( ip >> 16 ) && 0xff;
-	mask[0] = ( ip >> 24 ) && 0xff;
+	char buf[INET_ADDRSTRLEN];
+	std::string bcast = "0.0.0.0";
+	if ( ::inet_ntop(AF_INET, &broadcast.s_addr, buf, sizeof(buf)) != nullptr )
+		bcast = std::string(buf);
 
-	if ( mask[0] != 255 ) comps[0] = 255 - comps[0];
-	if ( mask[1] != 255 ) comps[1] = 255 - comps[1];
-	if ( mask[2] != 255 ) comps[2] = 255 - comps[2];
-	if ( mask[3] != 255 ) comps[3] = 255 - comps[3];
-
-	if ( comps[0] < 0 || comps[0] > 255 ||
-		comps[1] < 0 || comps[1] > 255 ||
-		comps[2] < 0 || comps[2] > 255 ||
-		comps[3] < 0 || comps[3] > 255 )
-		return nl::ipaddress("0.0.0.0");
-
-	return nl::ipaddress(
-		std::to_string(comps[0]) + std::string(".") +
-		std::to_string(comps[1]) + std::string(".") +
-		std::to_string(comps[2]) + std::string(".") +
-		std::to_string(comps[3]));
-}
-
-nl::ipaddress nl::ipaddress::mask(const nl::prefix& prefix) const {
-
-	int prefix_length = (int)prefix;
-	return this -> mask(prefix_length);
+	return nl::ipaddress(bcast);
 }
 
 std::string nl::ipaddress::to_string() const {
@@ -169,46 +147,55 @@ in_addr nl::ipaddress::to_in_addr() const {
 	return this -> operator in_addr();
 }
 
-/*
-nl::ipaddress::ipaddress(const char* addr) {
-
-	this -> _addr = nl::ipaddress::sanitaze(std::string(addr));
-}
-*/
 nl::ipaddress::ipaddress(const std::string& addr) {
 
 	this -> _addr = nl::ipaddress::sanitaze(addr);
 }
 
+nl::ipaddress::ipaddress(const nl::prefix& prefix) {
+
+	nl::ipaddress ip = prefix.netmask();
+	this -> _addr = ip._addr;
+}
+
 std::string nl::ipaddress::sanitaze(const std::string& addr) {
 
-	std::vector<std::string> s = { "", "", "", "" };
-	int n = 0;
+	std::string _addr(addr);
+	std::vector<std::string> vec;
+	size_t pos;
 
-	for ( auto ch : addr ) {
-
-		if ( ch == '.' ) {
-			if ( n >= 0 && n < 4 && s[n].empty())
-				s[n] = "0";
-			n++;
-			continue;
-		} else if ( ::isdigit(ch) && ch == '0' && s[n].empty())
-			continue;
-		else if ( ::isdigit(ch) && n >= 0 && n < 4 )
-			s[n] += ch;
-	}
-
-	if ( n != 3 || s[3].empty())
+	if ( _addr.empty())
 		return "0.0.0.0";
 
-	for ( int index = 0; index < 4; index++ ) {
+	while (( pos = _addr.find_first_of('.')) != std::string::npos ) {
 
-		try {
-			int i = std::atoi(s[index].c_str());
-			if ( i < 0 || i > 255 || ( index == 0 && i == 0 ) || ( index == 3 && i == 0 ))
-				return "0.0.0.0";
-		} catch (...) { return "0.0.0.0"; }
+		vec.push_back(_addr.substr(0, pos));
+		_addr.erase(0, pos + 1);
 	}
 
-	return s[0] + "." + s[1] + "." + s[2] + "." + s[3];
+	if ( !_addr.empty())
+		vec.push_back(_addr);
+
+	if ( vec.size() != 4 || vec.at(3).empty() ||
+		std::find_if(vec.begin(), vec.end(), [](const std::string& s) {
+
+			for ( const auto& ch : s )
+				if ( !::isdigit(ch))
+					return true;
+
+			if ( int i = std::atoi(s.c_str()); i < 0 || i > 255 )
+				return true;
+
+			return false;
+
+		}) != vec.end())
+		return "0.0.0.0";
+
+	return vec[0] + "." + vec[1] + "." + vec[2] + "." + vec[3];
+}
+
+std::ostream& operator <<(std::ostream& os, const nl::ipaddress& ipaddress) {
+
+	os << ipaddress.to_string();
+	return os;
 }
